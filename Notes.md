@@ -1,0 +1,3 @@
+# OpenGL uses by default right handed coordinate system, but switches to left handed when perspective projection is applied (ie, all real space coordinates from RH System when smashed to the 2d plane, which has btw a little bit of thickness, meaning not really 2d; are swapped to LH system after applying this transformation or projection matrix. In reality, the world gets swapped/inverted around the camera)
+
+---- Note: we can change the default RH coordinate system to LH, unlike DX12 which always follows LH system strictly
