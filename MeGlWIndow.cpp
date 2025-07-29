@@ -2,21 +2,10 @@
 #include<fstream>
 #include<glm/glm.hpp>
 #include<glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include<glm/gtx/transform.hpp>
 #include<Primitives/Vertex.h>
 #include<Primitives/ShapeGenerator.h>
-
-MeGlWindow::MeGlWindow(int width, int height, const std::string& title) 
-    : width_(width), height_(height), title_(title), window_(nullptr)
-{
-}
-
-MeGlWindow::~MeGlWindow() 
-{
-    if (window_) {
-        glfwDestroyWindow(window_);
-    }
-    glfwTerminate();
-}
 
 // extern const char* vertexShaderCode;
 // extern const char* fragmentShaderCode;
@@ -29,6 +18,22 @@ const unsigned int TRIANGLE_SIZE_IN_BYTES = NUM_VERTICES_PER_TRIANGLE * NUM_FLOA
 const unsigned int MAX_TRAINGLES = 20;
 GLuint programId;
 GLuint numIndices;
+
+MeGlWindow::MeGlWindow(int width, int height, const std::string& title) 
+    : width_(width), height_(height), title_(title), window_(nullptr)
+{
+}
+
+MeGlWindow::~MeGlWindow() 
+{
+    if (window_) {
+        glfwDestroyWindow(window_);
+    }
+    glUseProgram(0); // dont use any shader program or stop using esisting programs
+    glDeleteProgram(programId); // if a shader is in use, delete will not have any effect
+    glfwTerminate();
+}
+
 
 void sendDataToOpenGL()
 {
@@ -140,6 +145,9 @@ void MeGlWindow::MainLoop() // equivalent to paintGL() func in Jamie King's play
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // fn ptr loaded from GLAD
         glViewport(0,0, w, h); // adjust drawings on window resize
 
+        GLint fullTransformMatrixUniformLocation = glGetUniformLocation(programId, "fullTransformMatrix");
+
+
         // glDrawArrays(GL_TRIANGLES, firstVertexIdx, verticesToRender);
         // glDrawElements(GL_TRIANGLES, verticesToRender, GL_UNSIGNED_SHORT, 0); //  the last arg is not truly a ptr, it takes the offsets of index buffer, now nothing, so 0 or NULL
         //                      6 to render, from 5 available
@@ -169,19 +177,38 @@ void MeGlWindow::MainLoop() // equivalent to paintGL() func in Jamie King's play
         /* it works but slow and expensive, instead we can use glm's advantage. it can multiply matrices while it is building another matrix
         glm::mat4 projectionMatrix = glm::perspective(glm::radians(60.0f), ((float)w) / h, 0.1f, 10.0f);
         glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f)); // the last arg is our intended destnn position, here -3 in Z
-        glm::mat4 rotationatrix = glm::rotate(glm::mat4(1.0f), glm::radians(54.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(54.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-        glm::mat4 fullTransformMatrix = projectionMatrix * translationMatrix * rotationatrix;
+        glm::mat4 fullTransformMatrix = projectionMatrix * translationMatrix * rotationMatrix;
         */
 
-        glm::mat4 projectionMatrix = glm::perspective(glm::radians(60.0f), ((float)w) / h, 0.1f, 10.0f);
+        /*
+        // by glm/gtc library, better and optimized
+        glm::mat4 projectionMatrix = glm::perspective(glm::radians(60.0f), ((float)w) / h, 0.1f, 10.0f); // actually its -0.1 and -10.0 since camera looks at -Z of RH Coord Sys
         glm::mat4 projectedTranslationMatrix = glm::translate(projectionMatrix, glm::vec3(0.0f, 0.0f, -3.0f)); // the last arg is our intended destnn position, here -3 in Z
         glm::mat4 fullTransformMatrix = glm::rotate(projectedTranslationMatrix, glm::radians(54.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        */
 
-        GLint fullTransformMatrixUniformLocation = glGetUniformLocation(programId, "fullTransformMatrix");
-        glUniformMatrix4fv(fullTransformMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
+        glm::mat4 fullTransformMatrix;
+        glm::mat4 projectionMatrix = glm::perspective(glm::radians(60.0f), ((float)w) / h, 0.1f, 10.0f); // actually its -0.1 and -10.0 since camera looks at -Z of RH Coord Sys
 
-        glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, 0);
+        // FIRST CUBE
+            // by glm/gtx library, easy for learner to digest
+            glm::mat4 translationMatrix = glm::translate(glm::vec3(-1.0f, 0.0f, -3.0f)); // the last arg is our intended destnn position, here -3 in Z
+            glm::mat4 rotationMatrix = glm::rotate(glm::radians(36.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            fullTransformMatrix = projectionMatrix * translationMatrix * rotationMatrix;
+            glUniformMatrix4fv(fullTransformMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
+
+            glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, 0);
+
+        // SECOND CUBE generation by instancing
+            // by glm/gtx library, easy for learner to digest
+            translationMatrix = glm::translate(glm::vec3(1.0f, 0.0f, -3.75f)); // the last arg is our intended destnn position, here -3 in Z
+            rotationMatrix = glm::rotate(glm::radians(126.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            fullTransformMatrix = projectionMatrix * translationMatrix * rotationMatrix;
+            glUniformMatrix4fv(fullTransformMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
+
+            glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, 0);
 
         glfwSwapBuffers(window_);
         glfwPollEvents();
@@ -269,6 +296,10 @@ void installShaders()
         std::cout << "Stopped because linking failed" << std::endl;
         return;
     }
+
+    glDeleteShader(vertexShaderId);
+    glDeleteShader(fragmentShaderId);
+
     glUseProgram(programId);
 }
 
