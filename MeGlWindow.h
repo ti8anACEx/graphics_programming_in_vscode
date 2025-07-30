@@ -12,6 +12,7 @@ public:
     ~MeGlWindow();
 
     bool Init();
+    void sendDataToOpenGL();
     void MainLoop();
 
 private:

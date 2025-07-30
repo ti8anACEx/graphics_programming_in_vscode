@@ -6,6 +6,9 @@
 #include<glm/gtx/transform.hpp>
 #include<Primitives/Vertex.h>
 #include<Primitives/ShapeGenerator.h>
+#include<imgui/imgui.h>
+#include<imgui/backends/imgui_impl_glfw.h>
+#include<imgui/backends/imgui_impl_opengl3.h>
 
 // extern const char* vertexShaderCode;
 // extern const char* fragmentShaderCode;
@@ -35,81 +38,58 @@ MeGlWindow::~MeGlWindow()
 }
 
 
-void sendDataToOpenGL()
+void MeGlWindow::sendDataToOpenGL()
 {
-    /*
-        const float rtZ =  0.5f; // RED_TRIANGLE_Z ie depth
-        const float btZ = -0.5f; // BLUE_TRIANGLE_Z ie depth
-        GLfloat verts[] = {
-            0.0f, 1.0f, -1.0f,//position attrib
-                0.0f, 0.0f, 1.0f, // color attrib
-            -1.0f, -1.0f, rtZ,
-                1.0f, 0.0f, 0.0f,
-            1.0f,- 1.0f, rtZ,
-                1.0f, 0.0f, 0.0f,
-
-            1.0f, 1.0f, btZ,
-                0.0f, 0.0f, 1.0f,
-            0.0f, 1.0f, btZ,
-                0.0f, 0.0f, 1.0f,
-            0.0f, -1.0f, btZ,
-                0.0f, 0.0f, 1.0f,
-        };
-    */
-
     ShapeData shape = ShapeGenerator::makeCube();
 
-    /*
-    // Buffer Objects
-        GLuint vertexBufferID;
-        glGenBuffers(1, &vertexBufferID);
-        glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
-        glBufferData(GL_ARRAY_BUFFER, MAX_TRAINGLES * TRIANGLE_SIZE_IN_BYTES, NULL, GL_STATIC_DRAW); // copies the array data to the buffer, with ID vertexBufferId
+    GLuint vertexBufferID;
+    glGenBuffers(1, &vertexBufferID);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
+    glBufferData(GL_ARRAY_BUFFER, shape.vertexBufferSize(), shape.vertices, GL_STATIC_DRAW); // copies the array data to the buffer, with ID vertexBufferId
 
-        GLuint firstAttrib = 0; GLint noOfElementsInFirstAttrib = 3; GLsizei stride = 6 * sizeof(GLfloat); // stride is the distance from one set of attribs to another set of attribs, ie 'i'th Vertex data to 'i+1'th Vertex data
-        glEnableVertexAttribArray(firstAttrib);
-        // now describe the array, like how to split, how to index the attribs, etc.
-        glVertexAttribPointer(firstAttrib, noOfElementsInFirstAttrib, GL_FLOAT, GL_FALSE, stride, 0);
-        //                                                          type of elements, should gl normalize the data, stride, ptr
+    GLuint firstAttrib = 0; GLint noOfElementsInFirstAttrib = 3; GLsizei stride = 6 * sizeof(GLfloat); // stride is the distance from one set of attribs to another set of attribs, ie 'i'th Vertex data to 'i+1'th Vertex data
+    glEnableVertexAttribArray(firstAttrib);
+    // now describe the array, like how to split, how to index the attribs, etc.
+    glVertexAttribPointer(firstAttrib, noOfElementsInFirstAttrib, GL_FLOAT, GL_FALSE, stride, 0);
+    //                                                          type of elements, should gl normalize the data, stride, ptr
 
-        // now for color attrib(second attrib) of each vertex
-        GLuint secondAttrib = 1; GLint noOfElementsInSecondAttrib = 3; GLsizei strideWrtSecondAttrib = 6 * sizeof(GLfloat); GLsizei sizeBeforeToReachTheFirst_SecondAttrib = 3 * sizeof(GLfloat);
-        glEnableVertexAttribArray(secondAttrib);
-        glVertexAttribPointer(secondAttrib, noOfElementsInSecondAttrib, GL_FLOAT, GL_FALSE, strideWrtSecondAttrib, (GLsizei*)(sizeBeforeToReachTheFirst_SecondAttrib)); // since opengl is old, cast it to any type of ptr
-        
-    */
-    /*
-        // indices (or index array buffers or element array buffers) are used to get rid off redundant vertices
-        GLushort indices[] = {0,1,2, 3,4,5};
-        GLuint indexBufferId;
-        glGenBuffers(1, &indexBufferId);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferId);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-    */
+    // now for color attrib(second attrib) of each vertex
+    GLuint secondAttrib = 1; GLint noOfElementsInSecondAttrib = 3; GLsizei strideWrtSecondAttrib = stride; GLsizei sizeBeforeToReachTheFirst_SecondAttrib = 3 * sizeof(GLfloat);
+    glEnableVertexAttribArray(secondAttrib);
+    // or we can do this to get a varying/uniform like behaviour: glVertexAttrib3f(secondAttrib, 0.0f, 1.0f, 1.0f); but comment the previous line.
+    glVertexAttribPointer(secondAttrib, noOfElementsInSecondAttrib, GL_FLOAT, GL_FALSE, strideWrtSecondAttrib, (GLsizei*)(sizeBeforeToReachTheFirst_SecondAttrib)); // since opengl is old, cast it to any type of ptr
 
-        GLuint vertexBufferID;
-        glGenBuffers(1, &vertexBufferID);
-        glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
-        glBufferData(GL_ARRAY_BUFFER, shape.vertexBufferSize(), shape.vertices, GL_STATIC_DRAW); // copies the array data to the buffer, with ID vertexBufferId
+    GLuint indexBufferId;
+    glGenBuffers(1, &indexBufferId);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferId);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, shape.indexBufferSize(), shape.indices, GL_STATIC_DRAW);
+    numIndices = shape.numIndices;
+    shape.cleanup();
 
-        GLuint firstAttrib = 0; GLint noOfElementsInFirstAttrib = 3; GLsizei stride = 6 * sizeof(GLfloat); // stride is the distance from one set of attribs to another set of attribs, ie 'i'th Vertex data to 'i+1'th Vertex data
-        glEnableVertexAttribArray(firstAttrib);
-        // now describe the array, like how to split, how to index the attribs, etc.
-        glVertexAttribPointer(firstAttrib, noOfElementsInFirstAttrib, GL_FLOAT, GL_FALSE, stride, 0);
-        //                                                          type of elements, should gl normalize the data, stride, ptr
+    GLuint transformationMatrixBufferId;
+    glGenBuffers(1, &transformationMatrixBufferId);
+    glBindBuffer(GL_ARRAY_BUFFER, transformationMatrixBufferId);
+    // TODO:                                        fix aspect ratio thing, if window size changes cube wont be projected properly
+    glm::mat4 projectionMatrix = glm::perspective(glm::radians(60.0f), ((float)width_) / height_, 0.1f, 10.0f); // actually its -0.1 and -10.0 since camera looks at -Z of RH Coord Sys
+    glm::mat4 fullTransforms[] = {
+        // FOR FIRST CUBE, using glm/gtx library
+        projectionMatrix * glm::translate(glm::vec3(-1.0f, 0.0f, -3.0f)) * glm::rotate(glm::radians(36.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
+        // SECOND CUBE 
+        projectionMatrix * glm::translate(glm::vec3(1.0f, 0.0f, -3.75f)) * glm::rotate(glm::radians(126.0f), glm::vec3(0.0f, 1.0f, 0.0f))
+    };
+    glBufferData(GL_ARRAY_BUFFER, sizeof(fullTransforms), fullTransforms, GL_STATIC_DRAW);
+    // although we wanna send 16 GL_FLOATS, the max we can send at once is 4 (also the attrib number increments after 4 gaps, so keep track of it)
+    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(GLfloat) * 0));
+    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(GLfloat) * 4));
+    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(GLfloat) * 8));
+    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(GLfloat) * 12));
 
-        // now for color attrib(second attrib) of each vertex
-        GLuint secondAttrib = 1; GLint noOfElementsInSecondAttrib = 3; GLsizei strideWrtSecondAttrib = stride; GLsizei sizeBeforeToReachTheFirst_SecondAttrib = 3 * sizeof(GLfloat);
-        glEnableVertexAttribArray(secondAttrib);
-        glVertexAttribPointer(secondAttrib, noOfElementsInSecondAttrib, GL_FLOAT, GL_FALSE, strideWrtSecondAttrib, (GLsizei*)(sizeBeforeToReachTheFirst_SecondAttrib)); // since opengl is old, cast it to any type of ptr
-
-        // index buffer
-        GLuint indexBufferId;
-        glGenBuffers(1, &indexBufferId);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferId);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, shape.indexBufferSize(), shape.indices, GL_STATIC_DRAW);
-        numIndices = shape.numIndices;
-        shape.cleanup();
+    glEnableVertexAttribArray(2); glEnableVertexAttribArray(3); glEnableVertexAttribArray(4); glEnableVertexAttribArray(5);
+        // Do instancing stuff now
+        GLuint attribNumber = 2, divisor = 1;
+        glVertexAttribDivisor(attribNumber, divisor); // divisor divides the instance numbers to help out get a rate of applying the attribute (offsets attrib) to that instance. 'offests' therefore varies per instance now unlike 'vertexBuffer' which varies per vertex (default behavior)
+        glVertexAttribDivisor(3, 1); glVertexAttribDivisor(4, 1); glVertexAttribDivisor(5, 1); 
+        // then do glDrawElementsInstanced() in MainLoop
 }
 
 void sendAnotherTriangleToOpenGl() {
@@ -134,85 +114,53 @@ void sendAnotherTriangleToOpenGl() {
 
 void MeGlWindow::MainLoop() // equivalent to paintGL() func in Jamie King's playlist
 {
+    { // ImGUI Init
+        ImGui::CreateContext();
+        ImGui_ImplGlfw_InitForOpenGL(window_, true);
+        ImGui::StyleColorsDark();
+        ImGui_ImplOpenGL3_Init("#version 330");
+    }
+
     GLint firstVertexIdx = 0; // trainge in 0th idx. OR firstVertex ie vertex in 0th idx
     GLsizei verticesToRender = 3 + 3;
 
     while(!glfwWindowShouldClose(window_)) {
-        int w, h;
-        glfwGetFramebufferSize(window_, &w, &h);
+        { // ImGUI Render Loop Init
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
+        }
+
+        glfwGetFramebufferSize(window_, &width_, &height_);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // Optional background color
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // fn ptr loaded from GLAD
-        glViewport(0,0, w, h); // adjust drawings on window resize
-
-        GLint fullTransformMatrixUniformLocation = glGetUniformLocation(programId, "fullTransformMatrix");
+        glViewport(0,0, width_, height_); // adjust drawings on window resize
 
 
-        // glDrawArrays(GL_TRIANGLES, firstVertexIdx, verticesToRender);
-        // glDrawElements(GL_TRIANGLES, verticesToRender, GL_UNSIGNED_SHORT, 0); //  the last arg is not truly a ptr, it takes the offsets of index buffer, now nothing, so 0 or NULL
-        //                      6 to render, from 5 available
+        // glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, 0);
+        glDrawElementsInstanced(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, 0, 2);
 
-        /*
-            sendAnotherTriangleToOpenGl();
-            // glDrawArrays(GL_TRIANGLES, firstVertexIdx, numOfTriangles * NUM_VERTICES_PER_TRIANGLE);
-            glDrawArrays(GL_TRIANGLES, (numOfTriangles - 1) * NUM_VERTICES_PER_TRIANGLE, NUM_VERTICES_PER_TRIANGLE);
-        */
-       
-       /*
-        // send uniform data
-        GLint dominatingColorUniformLocation = glGetUniformLocation(programId, "dominatingColor");
-        GLint yFlipUniformLocation = glGetUniformLocation(programId, "yFlip");
+        { // ImGUI UI
+            ImGui::Begin("My Window");
+            ImGui::Text("Hello from ImGui!");
+            ImGui::End();
+        }
 
-        glm::vec3 dominatingColor(1.0f, 0.0f, 0.0f);
-            glUniform3fv(dominatingColorUniformLocation, 1, &dominatingColor[0]);
-            glUniform1f(yFlipUniformLocation, 1.0f);
-        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_SHORT, 0);
-
-        dominatingColor.r = 0; dominatingColor.b = 1;
-            glUniform3fv(dominatingColorUniformLocation, 1, &dominatingColor[0]);
-            glUniform1f(yFlipUniformLocation, -1.0f);
-        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_SHORT, 0);
-       */
-
-        /* it works but slow and expensive, instead we can use glm's advantage. it can multiply matrices while it is building another matrix
-        glm::mat4 projectionMatrix = glm::perspective(glm::radians(60.0f), ((float)w) / h, 0.1f, 10.0f);
-        glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f)); // the last arg is our intended destnn position, here -3 in Z
-        glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(54.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-
-        glm::mat4 fullTransformMatrix = projectionMatrix * translationMatrix * rotationMatrix;
-        */
-
-        /*
-        // by glm/gtc library, better and optimized
-        glm::mat4 projectionMatrix = glm::perspective(glm::radians(60.0f), ((float)w) / h, 0.1f, 10.0f); // actually its -0.1 and -10.0 since camera looks at -Z of RH Coord Sys
-        glm::mat4 projectedTranslationMatrix = glm::translate(projectionMatrix, glm::vec3(0.0f, 0.0f, -3.0f)); // the last arg is our intended destnn position, here -3 in Z
-        glm::mat4 fullTransformMatrix = glm::rotate(projectedTranslationMatrix, glm::radians(54.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        */
-
-        glm::mat4 fullTransformMatrix;
-        glm::mat4 projectionMatrix = glm::perspective(glm::radians(60.0f), ((float)w) / h, 0.1f, 10.0f); // actually its -0.1 and -10.0 since camera looks at -Z of RH Coord Sys
-
-        // FIRST CUBE
-            // by glm/gtx library, easy for learner to digest
-            glm::mat4 translationMatrix = glm::translate(glm::vec3(-1.0f, 0.0f, -3.0f)); // the last arg is our intended destnn position, here -3 in Z
-            glm::mat4 rotationMatrix = glm::rotate(glm::radians(36.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            fullTransformMatrix = projectionMatrix * translationMatrix * rotationMatrix;
-            glUniformMatrix4fv(fullTransformMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
-
-            glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, 0);
-
-        // SECOND CUBE generation by instancing
-            // by glm/gtx library, easy for learner to digest
-            translationMatrix = glm::translate(glm::vec3(1.0f, 0.0f, -3.75f)); // the last arg is our intended destnn position, here -3 in Z
-            rotationMatrix = glm::rotate(glm::radians(126.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            fullTransformMatrix = projectionMatrix * translationMatrix * rotationMatrix;
-            glUniformMatrix4fv(fullTransformMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
-
-            glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, 0);
+        { // ImGUI Rendering
+            ImGui::Render();
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        }
 
         glfwSwapBuffers(window_);
         glfwPollEvents();
     }
+
+    { // ImGUI terminate
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+    }
+    ImGui::DestroyContext();
 }
 bool checkStatus(GLuint objectId,
     PFNGLGETSHADERIVPROC objectPropertyGetterFunc,
